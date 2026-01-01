@@ -57,42 +57,44 @@ import { NextResponse } from "next/server";
 
 export async function POST(req) {
   try {
+    // 1️⃣ Signing secret check
     const SIGNING_SECRET = process.env.SIGNING_SECRET;
     if (!SIGNING_SECRET) {
       return NextResponse.json(
-        { error: "Missing SIGNING_SECRET" },
+        { error: "SIGNING_SECRET missing" },
         { status: 500 }
       );
     }
 
-    // Get headers
+    // 2️⃣ Get headers (NO await here)
     const headerPayload = headers();
+
     const svixHeaders = {
-      "svix_id": headerPayload.get("svix_id"),
-      "svix_timestamps": headerPayload.get("svix_timestamps"),
-      "svix_signature": headerPayload.get("svix_signature"),
+      "svix-id": headerPayload.get("svix-id"),
+      "svix-timestamp": headerPayload.get("svix-timestamp"),
+      "svix-signature": headerPayload.get("svix-signature"),
     };
 
-    // Get body
-    const payload = await req.json();
+    // 3️⃣ Get request body
+    const payload = await req.json(); // () is IMPORTANT
     const body = JSON.stringify(payload);
 
-    // Verify webhook
+    // 4️⃣ Verify Clerk webhook
     const wh = new Webhook(SIGNING_SECRET);
     const { data, type } = wh.verify(body, svixHeaders);
 
-    // Connect DB
+    // 5️⃣ Connect MongoDB
     await connectDB();
 
-    // Prepare user data
+    // 6️⃣ Prepare user data
     const userData = {
       _id: data.id,
-      email: data.email_addresses[0].email_address,
-      name: `${data.first_name || ""} ${data.last_name || ""}`,
-      image: data.image_url,
+      email: data.email_addresses?.[0]?.email_address || "",
+      name: `${data.first_name || ""} ${data.last_name || ""}`.trim(),
+      image: data.image_url || "",
     };
 
-    // Handle events
+    // 7️⃣ Handle events
     switch (type) {
       case "user.created":
         await User.create(userData);
@@ -107,12 +109,13 @@ export async function POST(req) {
         break;
 
       default:
-        break;
+        console.log("Unhandled event:", type);
     }
 
-    return NextResponse.json({ message: "Event received" });
+    // 8️⃣ Success response
+    return NextResponse.json({ message: "Webhook received" });
   } catch (error) {
-    console.error("Clerk webhook error:", error);
+    console.error("Clerk Webhook Error:", error);
     return NextResponse.json(
       { error: "Webhook failed" },
       { status: 500 }

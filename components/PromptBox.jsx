@@ -53,7 +53,7 @@ const ChatComponent = ({ isLoading, setIsLoading }) => {
 
     // Save user message to DB
     try {
-      await axios.post("http://localhost:3001/api/chat/message", {
+      await axios.post("http://localhost:3000/api/chat/message", {
         chatId,
         message: userMessage,
       });
@@ -86,7 +86,7 @@ const ChatComponent = ({ isLoading, setIsLoading }) => {
       }));
 
       // Save AI message to DB
-      await axios.post("http://localhost:3001/api/chat/message", {
+      await axios.post("http://localhost:3000/api/chat/message", {
         chatId,
         message: assistantMessage,
       });
